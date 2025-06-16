@@ -13,5 +13,12 @@ This project combines **YOLOv8** for face detection and **Dlib** for face recogn
 - 💡 Minimal dependencies, simple setup
 
 ---
+## Why YOLO not OpenCV?
+
+- We aimed for better accuraccy so YOLO being a Deep Learning algo does that.
+- Even works with multiple faces at multiple angles.
+- This project was run on Raspberry Pi 5 board so better optimization and runtime.
+
+---
 ## Under Progress 
 
