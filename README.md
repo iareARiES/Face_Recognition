@@ -13,5 +13,5 @@ This project combines **YOLOv8** for face detection and **Dlib** for face recogn
 - 💡 Minimal dependencies, simple setup
 
 ---
-##Under Progress 
+## Under Progress 
 
