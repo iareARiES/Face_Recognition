@@ -20,24 +20,31 @@ This project combines **YOLOv8** for face detection and **Dlib** for face recogn
 - This project was run on Raspberry Pi 5 board so better optimization and runtime.
 
 ---
-##📁 Step-by-Step Instructions
-1️⃣ Download Dataset from KaggleHub
-python
-Copy
-Edit
+## 📁 Step-by-Step Instructions
+
+# 🧠 YOLOv8 Face Detection on WIDER FACE Dataset
+
+This repository demonstrates how to train a YOLOv8 model for face detection using the [WIDER FACE dataset](https://www.kaggle.com/datasets/lylmsc/wider-face-for-yolo-training). It includes dataset preparation, training, and inference using the `ultralytics` YOLOv8 library.
+
+---
+
+## 📦 Dataset Download & Preparation
+
+```python
 import os
 import kagglehub
 
----
+# Set KaggleHub cache directory
 os.environ["KAGGLEHUB_CACHE"] = "/content/Dataset"
-path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
-2️⃣ Move & Rename Dataset Folder
-python
-Copy
-Edit
-import shutil
-shutil.move("/content/Dataset/datasets/lylmsc/wider-face-for-yolo-training/versions/1", "/content")
-os.rename("/content/1", "/content/WiderFace")
 
-!rm -rf /content/Dataset/
+# Download WIDER FACE dataset
+path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
+
+
+
+## ⚙️ Requirements for training
+
+Install the necessary libraries:
+```bash
+pip install ultralytics kagglehub scikit-learn
 
