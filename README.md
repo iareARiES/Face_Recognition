@@ -1,34 +1,41 @@
-# Face Detection and Recognition System using YOLOv8 and Dlib
+# 🎯 Face Detection and Recognition System using YOLOv8 and Dlib
 
-This project combines **YOLOv8** for face detection and **Dlib** for face recognition by extracting 128-dimensional embeddings. It's a lightweight, accurate system suitable for custom datasets and real-time applications.
+This project combines **YOLOv8** for high-accuracy face detection and **Dlib** for face recognition by extracting 128-dimensional facial embeddings. It’s optimized for real-time use and edge devices like **Raspberry Pi 5**.
 
 ---
 
 ## 🚀 Features
 
-- 🧠 **Custom-trained YOLOv8** face detector (on Wider Face or your dataset)
-- 🧷 **Dlib embeddings** for accurate face recognition
-- 📝 Store face encodings in **SQLite** or **Pickle**
+- 🧠 **YOLOv8** for fast and accurate face detection
+- 🧷 **Dlib 128D embeddings** for face recognition
+- 🗃️ Store encodings using **SQLite** or **Pickle**
 - 🧪 Face matching using **Euclidean/Cosine distance**
-- 💡 Minimal dependencies, simple setup
+- 🧩 Works on custom datasets and real-time webcam feeds
+- 🧑‍💻 Runs on **Raspberry Pi 5** and low-power edge devices
 
 ---
-## Why YOLO not OpenCV?
 
-- We aimed for better accuraccy so YOLO being a Deep Learning algo does that.
-- Even works with multiple faces at multiple angles.
-- This project was run on Raspberry Pi 5 board so better optimization and runtime.
+## ❓ Why YOLOv8 instead of OpenCV ?
+
+- YOLOv8 is **deep learning-based** and more accurate than Haar cascades.
+- Detects **multiple faces** in multiple orientations.
+- Suitable for **edge deployment** due to `yolov8n` (nano version) optimization.
 
 ---
-## 📁 Step-by-Step Instructions
 
-# 🧠 YOLOv8 Face Detection on WIDER FACE Dataset
+## 📁 Project Stages
 
-This repository demonstrates how to train a YOLOv8 model for face detection using the [WIDER FACE dataset](https://www.kaggle.com/datasets/lylmsc/wider-face-for-yolo-training). It includes dataset preparation, training, and inference using the `ultralytics` YOLOv8 library.
+1. ✅ Train YOLOv8 on the WIDER FACE dataset  
+2. ✅ Extract and save trained face detector (`best.pt`)  
+3. 🔜 Integrate Dlib for recognition using face embeddings  
+4. 🔜 Add face encoding database & matching  
+5. 🔜 Real-time demo with live camera input  
 
 ---
 
 ## 📦 Dataset Download & Preparation
+
+We use the **WIDER FACE** dataset available via KaggleHub.
 
 ```python
 import os
@@ -40,11 +47,4 @@ os.environ["KAGGLEHUB_CACHE"] = "/content/Dataset"
 # Download WIDER FACE dataset
 path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
 
-
-
-## ⚙️ Requirements for training
-
-Install the necessary libraries:
-```bash
-pip install ultralytics kagglehub scikit-learn
 
