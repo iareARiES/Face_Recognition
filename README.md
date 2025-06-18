@@ -48,7 +48,7 @@ os.environ["KAGGLEHUB_CACHE"] = "/content/Dataset"
 path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training") 
 ```
 ---
-# Run this in terminal to export the code in ONNX fomrat 
+# Run this in terminal to export the code in ONNX format 
 
 ```
   yolo export \
@@ -61,4 +61,31 @@ path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
   opset=12
 ```
 
+# WHY?
+
+This is configured to export a YOLOv8 model to ONNX with specific parameters that make it easier to use in real-time applications like webcam face detection. Here's the reason for each flag:
+
+🔍 Breakdown of Each Parameter
+Parameter	Why it matters
+model=best.pt	This is your trained PyTorch YOLOv8 model to be exported.
+format=onnx	You want to use the model with onnxruntime, so ONNX is the required format.
+simplify=True	Removes redundant ops from the graph to speed up inference and reduce file size.
+dynamic=False	Input size is fixed (640×640). Fixed-size models run faster on ONNXRuntime.
+nms=True	Exports the model with Non-Maximum Suppression (NMS) built-in to ONNX.
+imgsz=640	YOLO expects 640×640 inputs. This must match your runtime input size.
+opset=12	Ensures compatibility with ONNX opset version 12 (commonly supported by runtime engines).
+
+🚀 Why This Combo?
+nms=True: You don't need to manually run NMS in Python, simplifies post-processing.
+
+simplify=True: Optimized for low-latency, edge devices, and webcam inference.
+
+dynamic=False: Ensures fast execution as ONNX can optimize better for fixed shapes.
+
+# ⚠️ Important Matching
+If you use imgsz=640, your inference frame must also be resized to (640, 640) like:
+
+```
+img = cv2.resize(frame, (640, 640))
+```
 
