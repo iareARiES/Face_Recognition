@@ -71,19 +71,23 @@ yolo export model=best.pt format=onnx simplify=True dynamic=False nms=True imgsz
 This is configured to export a YOLOv8 model to ONNX with specific parameters that make it easier to use in real-time applications like webcam face detection. Here's the reason for each flag:
 
 🔍 Breakdown of Each Parameter
-Parameter	Why it matters
-- **model=best.pt**	This is your trained PyTorch YOLOv8 model to be exported.
-- **format=onnx**	You want to use the model with onnxruntime, so ONNX is the required format.
-- **simplify=True**	Removes redundant ops from the graph to speed up inference and reduce file size.
-- **dynamic=False**	Input size is fixed (640×640). Fixed-size models run faster on ONNXRuntime.
-- **nms=True**	Exports the model with Non-Maximum Suppression (NMS) built-in to ONNX.
-- **imgsz=640**	YOLO expects 640×640 inputs. This must match your runtime input size.
-- **opset=12**	Ensures compatibility with ONNX opset version 12 (commonly supported by runtime engines).
 
-## 🚀 Why This Combo?
-nms=True: You don't need to manually run NMS in Python, simplifies post-processing.
-simplify=True: Optimized for low-latency, edge devices, and webcam inference.
-dynamic=False: Ensures fast execution as ONNX can optimize better for fixed shapes.
+### Why These Parameters?
+
+| Parameter      | Purpose                                                                 |
+|----------------|-------------------------------------------------------------------------|
+| model=best.pt  | Your trained YOLOv8 model                                               |
+| format=onnx    | ONNX format for cross-platform/edge deployment                          |
+| simplify=True  | Removes redundant ops for faster inference                              |
+| dynamic=False  | Fixed input size (640x640) for speed                                    |
+| nms=True       | Built-in Non-Maximum Suppression in ONNX                                |
+| imgsz=640      | Input image size (must match inference size)                            |
+| opset=12       | ONNX opset 12 for best compatibility                                    |
+
+---
+
+## ⚠️ Input Size Matching
+If you export with `imgsz=640`, resize your inference frames to (640, 640):
 
 # ⚠️ Important Matching
 If you use imgsz=640, your inference frame must also be resized to (640, 640) like:
@@ -91,4 +95,77 @@ If you use imgsz=640, your inference frame must also be resized to (640, 640) li
 ```
 img = cv2.resize(frame, (640, 640))
 ```
+---
+
+# 🧪 Step 3: Real-Time Inference using ONNX + OpenCV
+
+This step runs the real-time face detection using a YOLOv8 model exported to ONNX. We use `onnxruntime` for inference and `OpenCV` for webcam access and visualization.
+
+### 🔧 Installation
+
+Install required Python packages:
+
+```bash
+pip install opencv-python onnxruntime numpy
+```
+---
+
+**Ensure:**
+- You have `best.onnx` exported.
+- Python 3.7 or higher.
+
+---
+
+### 🧠 Pipeline Overview
+
+**Preprocessing**
+- Resize to 640x640
+- Convert BGR → RGB
+- Normalize to [0, 1]
+- Transpose to (C, H, W), add batch dim
+
+**Postprocessing**
+- Read model output: shape (N, 6)
+- Apply confidence threshold (`conf_thres=0.2`)
+- Rescale box coordinates to original image
+- Draw bounding boxes and labels
+
+**Inference Loop**
+- Read webcam frames
+- Detect faces in real-time
+- Press 'q' to quit
+
+---
+
+### ⚙️ Key Parameters
+
+| Parameter     | Purpose                                      | Recommendation         |
+|---------------|----------------------------------------------|------------------------|
+| imgsz=640     | Input size for model and inference           | 320 (faster), 640 (default) |
+| conf_thres    | Confidence threshold for detections          | 0.2 (adjust as needed) |
+| nms=True      | Built-in NMS in ONNX                         | Keep True              |
+| simplify=True | Optimized model graph                        | Required for speed     |
+| dynamic=False | Fixed input size                             | Best runtime perf      |
+
+---
+
+### ✅ Example Output
+
+- Webcam feed with bounding boxes labeled "Face: XX.X%"
+- ONNX output shapes printed per frame
+- Press 'q' to exit
+
+---
+
+## 🔗 Next Steps
+
+- Integrate Dlib-based 128D face embedding extractor
+- Create face database (SQLite or Pickle)
+- Match embeddings (cosine/Euclidean distance)
+- Display recognized names in real-time
+
+
+> You need a working webcam and a Raspberry Pi 5 or similar edge device for deployment.
+
+
 
