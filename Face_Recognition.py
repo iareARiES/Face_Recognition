@@ -1,102 +1,109 @@
-from ultralytics import YOLO
-import dlib
 import cv2
 import numpy as np
+import onnxruntime as ort
 import pickle
 import os
+from pathlib import Path
 
-# Load models
-print("[INFO] Loading YOLOv8 face detector...")
-model = YOLO("best.pt")
+# --------------------- CONFIG ----------------------
+YOLO_ONNX_PATH = "yolov8n_int8.onnx"  # Quantized YOLO model
+FACENET_ONNX_PATH = "facenet_int8.onnx"  # Quantized FaceNet model
+EMBEDDINGS_FILE = "embeddings.pkl"
+CONFIDENCE_THRESHOLD = 0.4
+RECOGNITION_THRESHOLD = 1.0
 
-print("[INFO] Loading Dlib face detector and encoder...")
-face_detector = dlib.get_frontal_face_detector()
-shape_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-face_encoder = dlib.face_recognition_model_v1("dlib_face_recognition_resnet_model_v1.dat")
+# ------------------ LOAD MODELS --------------------
+print("[INFO] Loading models...")
+yolo_sess = ort.InferenceSession(YOLO_ONNX_PATH)
+facenet_sess = ort.InferenceSession(FACENET_ONNX_PATH)
 
-# Load known embeddings
-print("[INFO] Loading saved embeddings...")
-if os.path.exists("embeddings.pkl"):
-    with open("embeddings.pkl", "rb") as f:
-        known_faces = pickle.load(f)
-    print(f"[INFO] Loaded {len(known_faces)} known face(s).")
-else:
-    known_faces = {}  # label -> embedding
-    print("[INFO] No embeddings found. Starting fresh.")
+def load_embeddings():
+    if os.path.exists(EMBEDDINGS_FILE):
+        with open(EMBEDDINGS_FILE, 'rb') as f:
+            return pickle.load(f)
+    return {}, 0
 
-# Next person ID
-next_id = len(known_faces)
+known_faces, next_id = load_embeddings()
 
-# Function: Extract embedding from a face image
-def get_face_embedding(face_image):
-    gray = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
-    dets = face_detector(gray, 1)
-    if len(dets) == 0:
-        return None
-    shape = shape_predictor(gray, dets[0])
-    embedding = face_encoder.compute_face_descriptor(face_image, shape)
-    return np.array(embedding)
+# --------------- YOLOv8 HELPERS --------------------
+def preprocess_yolo(img):
+    img_resized = cv2.resize(img, (640, 640))
+    img_transposed = img_resized[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+    return np.expand_dims(img_transposed, axis=0)
 
-# Function: Match face embedding with existing ones
-def recognize_face(new_embedding):
-    threshold = 0.6
-    for label, embedding in known_faces.items():
-        dist = np.linalg.norm(new_embedding - embedding)
-        if dist < threshold:
-            print(f"[INFO] Existing person recognized: {label}")
+def postprocess_yolo(output, original_shape):
+    predictions = output[0]  # N x 6 (x1, y1, x2, y2, conf, class)
+    results = []
+    for det in predictions:
+        if det[4] >= CONFIDENCE_THRESHOLD:
+            x1, y1, x2, y2 = map(int, det[:4])
+            h, w = original_shape
+            x1 = max(0, min(w, x1))
+            y1 = max(0, min(h, y1))
+            x2 = max(0, min(w, x2))
+            y2 = max(0, min(h, y2))
+            results.append((x1, y1, x2, y2))
+    return results
+
+# -------------- FACENET HELPERS --------------------
+def preprocess_face(face):
+    face = cv2.resize(face, (160, 160))
+    face = (face - 127.5) / 128.0
+    face = face.transpose(2, 0, 1)
+    return np.expand_dims(face.astype(np.float32), axis=0)
+
+def get_embedding(face):
+    input_name = facenet_sess.get_inputs()[0].name
+    return facenet_sess.run(None, {input_name: preprocess_face(face)})[0][0]
+
+def recognize(embedding):
+    global next_id
+    for label, db_embedding in known_faces.items():
+        dist = np.linalg.norm(embedding - db_embedding)
+        if dist < RECOGNITION_THRESHOLD:
             return label
-    print("[INFO] New person detected.")
-    return None
+    # New person
+    label = f"Person {next_id}"
+    known_faces[label] = embedding
+    next_id += 1
+    with open(EMBEDDINGS_FILE, 'wb') as f:
+        pickle.dump(known_faces, f)
+    return label
 
-# Open webcam
+# ------------------ MAIN LOOP ----------------------
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
-    print("[ERROR] Webcam could not be opened.")
+    print("[ERROR] Webcam not found.")
     exit()
 
-print("[INFO] Starting live face recognition...")
-while cap.isOpened():
+print("[INFO] Running face detection and recognition...")
+
+while True:
     ret, frame = cap.read()
     if not ret:
-        print("[ERROR] Frame read failed.")
         break
 
-    frame = cv2.flip(frame, 1)  # Mirror effect
-    results = model.predict(source=frame, imgsz=640, conf=0.4, verbose=False)
-    boxes = results[0].boxes.xyxy.cpu().numpy()
+    frame = cv2.flip(frame, 1)
+    img_input = preprocess_yolo(frame)
+    input_name = yolo_sess.get_inputs()[0].name
+    detections = yolo_sess.run(None, {input_name: img_input})
+    boxes = postprocess_yolo(detections, frame.shape[:2])
 
-    for box in boxes:
-        x1, y1, x2, y2 = map(int, box)
+    for (x1, y1, x2, y2) in boxes:
         face = frame[y1:y2, x1:x2]
-
         if face.size == 0:
-            print("[WARNING] Empty face region skipped.")
             continue
+        embedding = get_embedding(face)
+        label = recognize(embedding)
 
-        embedding = get_face_embedding(face)
-        if embedding is None:
-            print("[WARNING] Dlib could not detect landmarks.")
-            continue
-
-        label = recognize_face(embedding)
-
-        if label is None:
-            label = f"Person {next_id}"
-            known_faces[label] = embedding
-            next_id += 1
-            with open("embeddings.pkl", "wb") as f:
-                pickle.dump(known_faces, f)
-            print(f"[INFO] New embedding stored as {label}.")
-
-        # Draw face box and label
+        # Annotate
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, label, (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-    cv2.imshow("Live Face Recognition", frame)
-
+    cv2.imshow("Face Recognition", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        print("[INFO] Quitting...")
+        print("[INFO] Exiting...")
         break
 
 cap.release()
