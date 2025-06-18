@@ -61,6 +61,7 @@ path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
   imgsz=640 \
   opset=12
 ```
+or
 ```
 yolo export model=best.pt format=onnx simplify=True dynamic=False nms=True imgsz=640 opset=12
 ```
@@ -71,19 +72,17 @@ This is configured to export a YOLOv8 model to ONNX with specific parameters tha
 
 🔍 Breakdown of Each Parameter
 Parameter	Why it matters
-model=best.pt	This is your trained PyTorch YOLOv8 model to be exported.
-format=onnx	You want to use the model with onnxruntime, so ONNX is the required format.
-simplify=True	Removes redundant ops from the graph to speed up inference and reduce file size.
-dynamic=False	Input size is fixed (640×640). Fixed-size models run faster on ONNXRuntime.
-nms=True	Exports the model with Non-Maximum Suppression (NMS) built-in to ONNX.
-imgsz=640	YOLO expects 640×640 inputs. This must match your runtime input size.
-opset=12	Ensures compatibility with ONNX opset version 12 (commonly supported by runtime engines).
+- **model=best.pt**	This is your trained PyTorch YOLOv8 model to be exported.
+- **format=onnx**	You want to use the model with onnxruntime, so ONNX is the required format.
+- **simplify=True**	Removes redundant ops from the graph to speed up inference and reduce file size.
+- **dynamic=False**	Input size is fixed (640×640). Fixed-size models run faster on ONNXRuntime.
+- **nms=True**	Exports the model with Non-Maximum Suppression (NMS) built-in to ONNX.
+- **imgsz=640**	YOLO expects 640×640 inputs. This must match your runtime input size.
+- **opset=12**	Ensures compatibility with ONNX opset version 12 (commonly supported by runtime engines).
 
-🚀 Why This Combo?
+## 🚀 Why This Combo?
 nms=True: You don't need to manually run NMS in Python, simplifies post-processing.
-
 simplify=True: Optimized for low-latency, edge devices, and webcam inference.
-
 dynamic=False: Ensures fast execution as ONNX can optimize better for fixed shapes.
 
 # ⚠️ Important Matching
