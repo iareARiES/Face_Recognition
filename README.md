@@ -60,6 +60,9 @@ path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
   imgsz=640 \
   opset=12
 ```
+```
+yolo export model=best.pt format=onnx simplify=True dynamic=False nms=True imgsz=640 opset=12
+```
 
 # WHY?
 
