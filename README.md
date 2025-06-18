@@ -45,6 +45,20 @@ import kagglehub
 os.environ["KAGGLEHUB_CACHE"] = "/content/Dataset"
 
 # Download WIDER FACE dataset
-path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training")
+path = kagglehub.dataset_download("lylmsc/wider-face-for-yolo-training") 
+```
+---
+# Run this in terminal to export the code in ONNX fomrat 
+
+```
+  yolo export \
+  model=best.pt \
+  format=onnx \
+  simplify=True \
+  dynamic=False \
+  nms=True \
+  imgsz=640 \
+  opset=12
+```
 
 
