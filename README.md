@@ -159,7 +159,7 @@ pip install opencv-python onnxruntime numpy
 
 ## 🔗 Next Steps
 
-- Integrate Dlib-based 128D face embedding extractor
+- Integrate Face Recognition Library that can be compiled using ONNX 128D face embedding extractor
 - Create face database (SQLite or Pickle)
 - Match embeddings (cosine/Euclidean distance)
 - Display recognized names in real-time
