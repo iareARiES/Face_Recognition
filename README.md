@@ -89,7 +89,7 @@ This is configured to export a YOLOv8 model to ONNX with specific parameters tha
 ## ⚠️ Input Size Matching
 If you export with `imgsz=640`, resize your inference frames to (640, 640):
 
-# ⚠️ Important Matching
+## ⚠️ Important Matching
 If you use imgsz=640, your inference frame must also be resized to (640, 640) like:
 
 ```
