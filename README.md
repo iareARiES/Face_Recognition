@@ -1,6 +1,6 @@
 # 🎯 Face Detection and Recognition System using YOLOv8 and Dlib
 
-This project combines **YOLOv8** for high-accuracy face detection and **Dlib** for face recognition by extracting 128-dimensional facial embeddings. It’s optimized for real-time use and edge devices like **Raspberry Pi 5**.
+This project combines **YOLOv8** for high-accuracy face detection and face recognition by extracting 128-dimensional facial embeddings. It’s optimized for real-time use and edge devices like **Raspberry Pi 5**.
 
 ---
 
@@ -26,10 +26,11 @@ This project combines **YOLOv8** for high-accuracy face detection and **Dlib** f
 ## 📁 Project Stages
 
 1. ✅ Train YOLOv8 on the WIDER FACE dataset  
-2. ✅ Extract and save trained face detector (`best.pt`)  
-3. 🔜 Integrate Dlib for recognition using face embeddings  
-4. 🔜 Add face encoding database & matching  
-5. 🔜 Real-time demo with live camera input  
+2. ✅ Extract and save trained face detector (`best.pt`)
+3. ✅ Compile the model to ONNX for running on FPGA or other SoC's 
+4. 🔜 Integrate library recognition using face embeddings  
+5. 🔜 Add face encoding database & matching  
+6. 🔜 Real-time demo with live camera input  
 
 ---
 
