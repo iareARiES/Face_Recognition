@@ -28,8 +28,10 @@ def postprocess(outputs, orig_frame, conf_thres=0.2):
     scale_x = orig_w / 640
     scale_y = orig_h / 640
 
+    face_crops = []
+
     for pred in predictions:
-        obj_conf = pred[4]  #4 means 5th index thats for the prediction score
+        obj_conf = pred[4]
         if obj_conf < conf_thres:
             continue
 
@@ -38,18 +40,31 @@ def postprocess(outputs, orig_frame, conf_thres=0.2):
         x2 = int(pred[2] * scale_x)
         y2 = int(pred[3] * scale_y)
 
-        score_text = f"Face: {obj_conf * 100:.1f}%" 
-        cv2.rectangle(orig_frame, (x1, y1), (x2, y2), (255, 0, 0), 4) 
-        cv2.putText(orig_frame, score_text, (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)    #to display on the frame 
+        # Bounds check
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(orig_w, x2), min(orig_h, y2)
 
-    return orig_frame
+        # Crop face
+        face_crop = orig_frame[y1:y2, x1:x2].copy()
+        if face_crop.size > 0:
+            face_crops.append(face_crop)
+
+        # Draw box
+        score_text = f"Face: {obj_conf * 100:.1f}%"
+        cv2.rectangle(orig_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        cv2.putText(orig_frame, score_text, (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+
+    return orig_frame, face_crops
+
 
 # Start webcam
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
+
+last_num_faces = 0  # Track number of face windows in the last frame
 
 while True:
     ret, frame = cap.read()
@@ -65,10 +80,25 @@ while True:
     
     outputs = session.run(None, {input_name: input_tensor})    #running the inferance , Feeds the preprocessed tensor into the model.
     
-    print(f"ONNX Output shape: {outputs[0].shape}")
-    print(outputs)
+    '''print(f"ONNX Output shape: {outputs[0].shape}")
+    print(outputs)'''
 
-    annotated = postprocess(outputs, frame)
+    annotated, face_crops = postprocess(outputs, frame)
+    
+    print("last_num_faces before: ",last_num_faces)
+    # === 🆕 Close any leftover windows from previous frame ===
+    if last_num_faces > len(face_crops):
+        for i in range(len(face_crops), last_num_faces):
+            print("last_num_faces after: ",last_num_faces)
+            cv2.destroyWindow(f"Face {i+1}")
+    print("last_num_faces after again: ",last_num_faces)
+    last_num_faces = len(face_crops)  # update count
+    
+
+# For now, show the first detected face crop
+    for i, face_crop in enumerate(face_crops):
+    	cv2.imshow(f"Face {i+1}", face_crop)
+
     '''This line takes the raw model outputs (outputs) and the original image/frame (frame), and processes them to:
     - Filter detections (e.g., confidence > 0.2)
     - Apply Non-Maximum Suppression (NMS) to remove overlapping boxes
