@@ -1,0 +1,94 @@
+🎯 GOAL:
+For every detected face, get a stable 128D embedding, despite varying angles, lighting, or rotation.
+
+🔁 Pipeline: Step-by-Step Insight
+Step 1: Detect Faces (YOLOv8 ONNX)
+Input: Full frame from camera
+
+Output: List of face bounding boxes → (x1, y1, x2, y2)
+
+👉 Already implemented in your system.
+
+Step 2: Crop Face Region
+For each bounding box from YOLO:
+
+Crop the face from the full frame using the box coordinates
+
+Expand the crop slightly (add padding/margin) to include more context
+
+📌 Reason: Ensures landmarks like ears, chin, eyebrows aren’t cut off.
+
+Step 3: Run 106-Point Face Alignment (ONNX Model)
+Input: Cropped face (usually 112x112 or 224x224)
+
+Output: 106 (x, y) landmark points
+
+🔍 Why? It detects:
+
+Eyes (left/right)
+
+Nose tip
+
+Mouth corners
+
+Jawline, eyebrows, etc.
+
+Step 4: Align Face (Affine Transform using Eyes + Nose)
+Use:
+
+Left eye center
+
+Right eye center
+
+Nose tip
+
+Compute an affine transform to rotate and scale the face so:
+
+Eyes are horizontally aligned
+
+Face is centered
+
+📌 Why? Alignment eliminates head tilt or rotation, leading to consistent embeddings.
+
+Step 5: Resize to 112x112
+The aligned face should be resized (and possibly padded) to match MobileFaceNet input.
+
+Apply any required normalization (e.g., pixel range to [-1, 1]).
+
+Step 6: Run MobileFaceNet ONNX
+Input: (1, 3, 112, 112) aligned face image
+
+Output: (1, 128) vector (L2-normalized)
+
+This is your face embedding.
+
+Step 7: Store / Compare Embeddings
+You can now:
+
+Store the 128D vector (e.g., in SQLite or CSV)
+
+Compare it against known faces using cosine similarity
+
+📌 Cosine > 0.5 → potential match (threshold tunable based on your use case).
+
+🚦 Diagram Summary:
+csharp
+Copy
+Edit
+[Frame]
+   ↓
+[YOLOv8] → Face boxes
+   ↓
+[Crop face]
+   ↓
+[106-point ONNX model] → Landmarks
+   ↓
+[Affine Align using Eyes/Nose]
+   ↓
+[Resize to 112x112]
+   ↓
+[MobileFaceNet ONNX]
+   ↓
+[128D Embedding]
+   ↓
+[Store / Match / Display]
