@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pickle
 import os
-from FaceRecoGlinter import preprocess_face, get_embedding, preprocess_yolo, postprocess
+from MobileFaceNet_FaceRecognition import preprocess_face, get_embedding, preprocess_yolo, postprocess
 import onnxruntime as ort
 from picamera2 import Picamera2
 
