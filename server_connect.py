@@ -6,6 +6,7 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from websocket import WebSocketApp  # pip install websocket-client
 from typing import Dict
+import math
 
 HOST_IP = "192.168.252.10"   # <-- change to your host laptop's IP on the hotspot
 BASE = f"http://{HOST_IP}:8000"
@@ -122,6 +123,48 @@ def recognize(embedding, threshold=0.5):
             best_sim, best_name = sim, name
     return best_name if best_sim >= threshold else None
 
+def clamp(centre, low, high):
+    minPoint = max(low, min(centre, high))
+    return minPoint
+
+def minDistAndPoints(a, b):
+    """
+    True shortest distance between two axis-aligned boxes (OpenCV coords)
+    and the two points (one on each box) that realize that distance.
+    Boxes: (x1,y1,x2,y2) with y downwards.
+    """
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+
+    centreAx, centreAy = ((ax1+ax2)/2.0), ((ay1+ay2)/2.0)
+    centreBx, centreBy = ((bx1+bx2)/2.0), ((by1+by2)/2.0)
+
+    ptABx = clamp(centreAx, bx1, bx2)  # A is fixed -> take centre of A
+    ptABy = clamp(centreAy, by1, by2)
+
+    ptBAx = clamp(centreBx, ax1, ax2) # B is fixed -> take centre of B
+    ptBAy = clamp(centreBy, ay1, ay2)
+
+    dx = ptABx - ptBAx
+    dy = ptABy - ptBAy
+    distance = math.hypot(dx, dy)
+
+    return distance, ptABx, ptABy, ptBAx, ptBAy
+
+def calculateDist(results):
+    """Loops over all the boxes taking 2 at a time"""
+    boxes = [box for (box, _) in results]
+    n = len(boxes)
+    out = []
+    for i in range(n):
+        for j in range(i+1, n):
+            dist, ptAx, ptAy, ptBx, ptBy = minDistAndPoints(boxes[i], boxes[j])
+            out.append({"pair": (i, j),
+                        "dist": dist, 
+                        "ptAx": ptAx, "ptAy": ptAy, 
+                        "ptBx": ptBx, "ptBy": ptBy})
+    return out
+
 def detect_and_recognize(frame):
     input_tensor = preprocess_yolo(frame)
     outputs = yolo_session.run(None, {yolo_input_name: input_tensor})
@@ -153,10 +196,29 @@ if __name__ == "__main__":
         frame = cv2.flip(frame, 1)
         results = detect_and_recognize(frame)
 
-        for (x1, y1, x2, y2), name in results:
-            color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
+        # assign labels for unknown faces
+        labels, unk = [], 0
+        for (_box, name) in results:
+            if name == "Unknown":
+                unk += 1
+                labels.append(f"Unknown{unk}")
+            else:
+                labels.append(name)
+
+        for idx, ((x1, y1, x2, y2), _) in enumerate(results):
+            color = (0, 255, 0) if not labels[idx].startswith("Unknown") else (0, 0, 255)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+            cv2.putText(frame, labels[idx], (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+        # draw pairwise distances if multiple faces detected
+        if len(results) >= 2:
+            for p in calculateDist(results):
+                x1, y1 = int(p["ptAx"]), int(p["ptAy"])
+                x2, y2 = int(p["ptBx"]), int(p["ptBy"])
+                cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                mx, my = (x1 + x2) // 2, (y1 + y2) // 2
+                cv2.putText(frame, f"{p['dist']:.1f}px", (mx, my),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
 
         cv2.imshow("Face Recognition (Receiver)", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
